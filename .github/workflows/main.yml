@@ -10,6 +10,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
+      - name: Inside project
+        run:  cd second-option-react
       - name: Install dependencies
         run: npm ci
       - name: Run tests
