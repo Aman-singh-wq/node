@@ -13,7 +13,7 @@ jobs:
       - name: Inside project
         run:  cd second-option-react
       - name: Run Install
-        run: npm install
+        run: npm install second-option-react/package.json
       - name: Install dependencies
         run: npm ci second-option-react/package.json
       - name: Run tests
