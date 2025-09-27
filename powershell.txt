@@ -1,0 +1,55 @@
+# Toggle dry run mode
+$dryRun = $true  # Set to $false to apply changes
+
+# Load modules
+Import-Module Az
+Import-Module ImportExcel
+
+# Excel path
+$excelPath = "C:\Path\To\TagUpdateInput.xlsx"
+$tagUpdates = Import-Excel -Path $excelPath
+
+foreach ($row in $tagUpdates) {
+    $subscriptionId = $row.SubscriptionId
+    $resourceGroup = $row.ResourceGroupName
+    $tagKey = $row.TagKey
+    $newTagValue = $row.NewTagValue
+
+    Write-Host "`nProcessing Subscription: $subscriptionId, Resource Group: $resourceGroup"
+    Set-AzContext -SubscriptionId $subscriptionId
+
+    # --- Subscription Tags ---
+    $subscription = Get-AzSubscription -SubscriptionId $subscriptionId
+    $subTags = $subscription.Tags
+    if ($subTags.ContainsKey($tagKey)) {
+        Write-Host "Would update tag '$tagKey' on Subscription to '$newTagValue'"
+        if (-not $dryRun) {
+            $subTags[$tagKey] = $newTagValue
+            Set-AzSubscription -SubscriptionId $subscriptionId -Tag $subTags
+        }
+    }
+
+    # --- Resource Group Tags ---
+    $rg = Get-AzResourceGroup -Name $resourceGroup
+    $rgTags = $rg.Tags
+    if ($rgTags.ContainsKey($tagKey)) {
+        Write-Host "Would update tag '$tagKey' on Resource Group to '$newTagValue'"
+        if (-not $dryRun) {
+            $rgTags[$tagKey] = $newTagValue
+            Set-AzResourceGroup -Name $resourceGroup -Tag $rgTags
+        }
+    }
+
+    # --- Resource Tags ---
+    $resources = Get-AzResource -ResourceGroupName $resourceGroup
+    foreach ($resource in $resources) {
+        $tags = $resource.Tags
+        if ($tags.ContainsKey($tagKey)) {
+            Write-Host "Would update tag '$tagKey' on Resource '$($resource.Name)' to '$newTagValue'"
+            if (-not $dryRun) {
+                $tags[$tagKey] = $newTagValue
+                Set-AzResource -ResourceId $resource.ResourceId -Tag $tags -Force
+            }
+        }
+    }
+}
